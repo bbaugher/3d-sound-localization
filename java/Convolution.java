@@ -1,14 +1,8 @@
-/*
- * This program reads in a wav file and applies a SyncKernel lowpass filter;
- * the output is the new wav file.
- * Usage: main in.wav out.wav
- */
 
 import java.lang.*;
 import java.io.*;
 import javax.sound.sampled.*;
-//import edu.emory.mathcs.jtransforms.fft;
-//import edu.emory.mathcs.utils.IOUtils;
+import java.math.*;
 
 class Convolution {
 
@@ -50,9 +44,9 @@ class Convolution {
 			
 			w1.readFrames(w1_buffer, (int)w1_numFrames);
 			
-			//System.out.println("Length = "+w1_numFrames);
-			//DoubleFFT_1D w1_ft = new DoubleFFT_1D((int)w1_numFrames);
-			//w1_ft.realForwardFull(w1_buffer[0]);
+			//FT Stereo Sound Portion
+			DoubleFFT_1D w1_ft = new DoubleFFT_1D((int)w1_numFrames);
+			w1_ft.realForward(w1_buffer[0]);
 
 			// Open the wav file specified as the second argument
 			WavFile w2 = WavFile.openWavFile(new File(w2_filename));
@@ -67,6 +61,12 @@ class Convolution {
 			double[][] w2_buffer = new double[(int)w2_numChannels][(int)w2_numFrames];
 			
 			w2.readFrames(w2_buffer, (int)w2_numFrames);
+
+			//FT HRTF Portion
+			DoubleFFT_1D w2_ft = new DoubleFFT_1D((int)w2_numFrames);
+			w2_ft.realForward(w2_buffer[0]);
+
+			//Multiply FT Stereo Sound with FT HRTF
 
 			int new_frames = (int)w1_numFrames+(int)w2_numFrames-1;
 			double[][] newSound = new double[2][new_frames];
@@ -98,6 +98,62 @@ class Convolution {
 		
 	}
 
+	//S = Sound 
+	//L = Listener
+	//L_hrtf = The subject # of the HRTF database 
+	
+	static public double[] convolve3D(double Sx, double Sy, double Sz, double[] Sa, double Lx, double Ly, double Lz, int L_hrtf){
+		//Error Checking: Check for audio/file errors
+		
+		//Interpolation: Mix HRTF's using weighted average based on direction of sound
+
+		//Segmentation: Segment audio based on length of HRTF
+
+		//For each Segment		
+
+			//FT: Forward FT the sound segment and mixed HRTF
+
+			//Multiplication: Multiply the two FT signals together
+
+			//FT: Inverse FT the product
+	
+			//Rebuild: Add the inverse segment into the new sound
+
+		//Return new sound
+		return null;
+	}
+
+	//Segments the signal based on the given length of the HRTF
+	private double[][] segmentSignal(double[] s, int length){	
+		if(s.length>length){
+			int segments = (int)Math.ceil((double)s.length/((double)length));
+			double[][] seg_signal = new double[segments][length];
+			for(int i=0; i<segments; i++){
+				for(int j=0; j<length; j++){
+					if(i!=(segments-1))
+						seg_signal[i][j] = s[j+i*length];
+					else if((j+i*length)<s.length)
+						seg_signal[i][j] = s[j+i*length];
+					else
+						seg_signal[i][j] = 0;
+				}
+			}
+			return seg_signal;
+		}
+		else{
+			double[][] seg_signal = new double[1][length];
+			for(int i=0; i<length; i++){
+				if(s.length<i)
+					seg_signal[0][i] = s[i];
+				else
+					seg_signal[0][i] = 0;
+			}
+			return seg_signal;
+		}
+	}
+
+
+	//Convolution Sum Algorithm
 	static public double[] convolve_double(double[] HRTF, double[] source){
 		int len = HRTF.length;
 		double[] result = new double[source.length + len-1];
