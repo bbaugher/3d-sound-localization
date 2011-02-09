@@ -1,0 +1,5 @@
+Compile all java files
+	javac *.java
+
+Run the convolution program
+	java Convolution stereo_sound.wav hrtf.wav output.wav
