@@ -44,10 +44,6 @@ class Convolution {
 			
 			w1.readFrames(w1_buffer, (int)w1_numFrames);
 			
-			//FT Stereo Sound Portion
-			DoubleFFT_1D w1_ft = new DoubleFFT_1D((int)w1_numFrames);
-			w1_ft.realForward(w1_buffer[0]);
-
 			// Open the wav file specified as the second argument
 			WavFile w2 = WavFile.openWavFile(new File(w2_filename));
 			
@@ -62,18 +58,14 @@ class Convolution {
 			
 			w2.readFrames(w2_buffer, (int)w2_numFrames);
 
-			//FT HRTF Portion
-			DoubleFFT_1D w2_ft = new DoubleFFT_1D((int)w2_numFrames);
-			w2_ft.realForward(w2_buffer[0]);
-
-			//Multiply FT Stereo Sound with FT HRTF
-
 			int new_frames = (int)w1_numFrames+(int)w2_numFrames-1;
 			double[][] newSound = new double[2][new_frames];
 
 			int sampleRate = (int)w1_sampleRate;
 
 			WavFile out = WavFile.newWavFile(new File(args[2]), 2, new_frames, 16, sampleRate);
+
+			System.out.println("Starting Convolution Sum.");
 
 			long start, end, total, cstart, cend;
 			start = System.currentTimeMillis();
@@ -87,10 +79,24 @@ class Convolution {
 			System.out.println("Sound File Written.");
 
 			end = System.currentTimeMillis();
-			total = end - start;
+			long total1 = end - start;
 
+			System.out.println("Process took "+total1+" milliseconds.");
+
+			System.out.println("FFT Process");
+			start = System.currentTimeMillis();
+			
+			double[][] finalSound = convolve3D(0, 0, 0, w1_filename, 0, 0, 0, "1002", w2_filename);	
+			WavFile new_out = WavFile.newWavFile(new File("out2.wav"), 2, finalSound[0].length, 16, sampleRate);
+			new_out.writeFrames(finalSound, finalSound[0].length);
+			System.out.println("Sound file written.");	
+
+			end = System.currentTimeMillis();
+			total = end -start;
+	
 			System.out.println("Process took "+total+" milliseconds.");
-
+			System.out.println("Convolution Sum vs FFT "+(total1/total)+" to 1");
+			System.exit(0);
 		}
 		catch(Exception e){
 				System.err.println(e);
@@ -102,29 +108,80 @@ class Convolution {
 	//L = Listener
 	//L_hrtf = The subject # of the HRTF database 
 	
-	static public double[] convolve3D(double Sx, double Sy, double Sz, double[] Sa, double Lx, double Ly, double Lz, int L_hrtf){
+	static public double[][] convolve3D(double Sx, double Sy, double Sz, String Sa, double Lx, double Ly, double Lz, String L_hrtf, String hrtf_file){
 		//Error Checking: Check for audio/file errors
+
+		try{
+			// Open the wav file for the sound
+                	WavFile Sound_wave = WavFile.openWavFile(new File(Sa));	
+
+			//Read the file
+			double[][] sound_buffer = new double[2][(int)Sound_wave.getNumFrames()];
+			Sound_wave.readFrames(sound_buffer, (int)Sound_wave.getNumFrames());		
+
+			//If sound file only has one channel copy it to the second channel
+			if(Sound_wave.getNumChannels()==1){
+				for(int i=0; i<sound_buffer[0].length; i++)
+					sound_buffer[1][i] = sound_buffer[0][i];
+			}
+
+			// Open the wav file for the HRTF
+			String h = "180";
+			String a = "000";
+			String file_name = "../../HRTF\\ Database/Raw/IRC_"+L_hrtf+"_R/IRC_"+L_hrtf+"_R_R0195_T"+h+"_P"+a+".wav";
+			if(file_name.equals(hrtf_file)) System.out.println("Equal");
+			
+			WavFile hrtf_wave = WavFile.openWavFile(new File(hrtf_file));
+
+			//Read the file
+			double[][] hrtf_buffer = new double[(int)hrtf_wave.getNumChannels()][(int)hrtf_wave.getNumFrames()];
+			hrtf_wave.readFrames(hrtf_buffer, (int)hrtf_wave.getNumFrames());		
+
+			//Interpolation: Mix HRTF's using weighted average based on direction of sound
+
+			//For each channel
+			for(int c=0; c<sound_buffer.length; c++){
+				
+				//System.out.println("Segmenting Channel "+(c+1));
+				//Segmentation: Segment audio based on length of HRTF
+				double[][] segmented_buffer = segmentSignal(sound_buffer[c], (int)hrtf_wave.getNumFrames());	
+
+				//For each Segment
+				for(int i=0; i<segmented_buffer.length; i++){
+					
+					//System.out.println("FFT of segment "+(i+1)+" of Channel "+(c+1));
+					//FT: Forward FT the sound segment and mixed HRTF
+					DoubleFFT_1D sFFT = new DoubleFFT_1D(segmented_buffer[i].length);
+        	        	        sFFT.realForward(segmented_buffer[i]);	
+
+					DoubleFFT_1D hFFT = new DoubleFFT_1D(hrtf_buffer[c].length);
+					hFFT.realForward(hrtf_buffer[c]);
+
+					//Multiplication: Multiply the two FT signals together
+					for(int j=0; j<segmented_buffer[i].length; j++)
+						segmented_buffer[i][j] *= hrtf_buffer[c][j];
+
+					//FT: Inverse FT the product
+					sFFT.realInverse(segmented_buffer[i], true);	
+				}
+
+				//System.out.println("Reconstructing Channel "+(c+1));
+				//Rebuild: Add the inverse segment into the new sound
+				sound_buffer[c] = reconstructSignal(segmented_buffer, sound_buffer[c].length);
+			}	
 		
-		//Interpolation: Mix HRTF's using weighted average based on direction of sound
+			//Return new sound
+			return sound_buffer;
+		}
+		catch(Exception e){
+                                System.err.println(e);
+                }
 
-		//Segmentation: Segment audio based on length of HRTF
-
-		//For each Segment		
-
-			//FT: Forward FT the sound segment and mixed HRTF
-
-			//Multiplication: Multiply the two FT signals together
-
-			//FT: Inverse FT the product
-	
-			//Rebuild: Add the inverse segment into the new sound
-
-		//Return new sound
 		return null;
 	}
 
 	//Segments the signal based on the given length of the HRTF
-	private double[][] segmentSignal(double[] s, int length){	
+	static private double[][] segmentSignal(double[] s, int length){	
 		if(s.length>length){
 			int segments = (int)Math.ceil((double)s.length/((double)length));
 			double[][] seg_signal = new double[segments][length];
@@ -152,6 +209,18 @@ class Convolution {
 		}
 	}
 
+	//Reconstructs the signal from the segmented version
+	static private double[] reconstructSignal(double[][] s, int length){
+		double[] signal = new double[length];
+		for(int i=0; i<s.length; i++){
+			for(int j=0; j<s[i].length; j++){
+				if((i*s[i].length+j)<length)
+					signal[i*s[i].length+j] = s[i][j];
+				else break;
+			}
+		}
+		return signal;		
+	}
 
 	//Convolution Sum Algorithm
 	static public double[] convolve_double(double[] HRTF, double[] source){
