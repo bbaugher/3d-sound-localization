@@ -86,11 +86,13 @@ class Convolution {
 			System.out.println("FFT Process");
 			start = System.currentTimeMillis();
 			
+			//FFT Method
 			double[][] finalSound = convolve3D(0, 0, 0, w1_filename, 0, 0, 0, "1002", w2_filename);	
 			WavFile new_out = WavFile.newWavFile(new File("out2.wav"), 2, finalSound[0].length, 16, sampleRate);
 			new_out.writeFrames(finalSound, finalSound[0].length);
 			System.out.println("Sound file written.");	
-
+			//FFT Method
+	
 			end = System.currentTimeMillis();
 			total = end -start;
 	
@@ -115,7 +117,7 @@ class Convolution {
 			// Open the wav file for the sound
                 	WavFile Sound_wave = WavFile.openWavFile(new File(Sa));	
 
-			//Read the file
+			//Read the file into a buffer
 			double[][] sound_buffer = new double[2][(int)Sound_wave.getNumFrames()];
 			Sound_wave.readFrames(sound_buffer, (int)Sound_wave.getNumFrames());		
 
@@ -126,52 +128,59 @@ class Convolution {
 			}
 
 			// Open the wav file for the HRTF
-			String h = "180";
-			String a = "000";
-			String file_name = "../../HRTF\\ Database/Raw/IRC_"+L_hrtf+"_R/IRC_"+L_hrtf+"_R_R0195_T"+h+"_P"+a+".wav";
-			if(file_name.equals(hrtf_file)) System.out.println("Equal");
-			
+			//String file_name = "../../HRTF Database/Raw/IRC_"+L_hrtf+"_R/IRC_"+L_hrtf+"_R_R0195_T"+h+"_P"+a+".wav";
 			WavFile hrtf_wave = WavFile.openWavFile(new File(hrtf_file));
 
 			//Read the file
-			double[][] hrtf_buffer = new double[(int)hrtf_wave.getNumChannels()][(int)hrtf_wave.getNumFrames()];
+			double[][] hrtf_buffer = new double[(int)hrtf_wave.getNumChannels()][(2*(int)hrtf_wave.getNumFrames()-1)];
 			hrtf_wave.readFrames(hrtf_buffer, (int)hrtf_wave.getNumFrames());		
+
+			double[][] output_signal = new double[2][(sound_buffer[0].length+(int)hrtf_wave.getNumFrames()-1)];
 
 			//Interpolation: Mix HRTF's using weighted average based on direction of sound
 
 			//For each channel
 			for(int c=0; c<sound_buffer.length; c++){
 				
-				//System.out.println("Segmenting Channel "+(c+1));
+				System.out.println("Segmenting Channel "+(c+1));
 				//Segmentation: Segment audio based on length of HRTF
 				double[][] segmented_buffer = segmentSignal(sound_buffer[c], (int)hrtf_wave.getNumFrames());	
+			
+				//Pad the end of the hrtf_buffer with 0's
+				for(int j=(int)hrtf_wave.getNumFrames(); j<hrtf_buffer[c].length; j++)
+					hrtf_buffer[c][j] = 0;
+			
+				//Apply the Forward Fourier Transform to the filter kernel
+				DoubleFFT_1D hFFT = new DoubleFFT_1D(hrtf_buffer[c].length);
+				hFFT.realForward(hrtf_buffer[c]);
 
 				//For each Segment
 				for(int i=0; i<segmented_buffer.length; i++){
 					
-					//System.out.println("FFT of segment "+(i+1)+" of Channel "+(c+1));
+					System.out.println("FFT of segment "+(i+1)+" of Channel "+(c+1));
 					//FT: Forward FT the sound segment and mixed HRTF
 					DoubleFFT_1D sFFT = new DoubleFFT_1D(segmented_buffer[i].length);
         	        	        sFFT.realForward(segmented_buffer[i]);	
 
-					DoubleFFT_1D hFFT = new DoubleFFT_1D(hrtf_buffer[c].length);
-					hFFT.realForward(hrtf_buffer[c]);
+					//DoubleFFT_1D hFFT = new DoubleFFT_1D(hrtf_buffer[c].length);
+					//hFFT.realForward(hrtf_buffer[c]);
 
 					//Multiplication: Multiply the two FT signals together
 					for(int j=0; j<segmented_buffer[i].length; j++)
 						segmented_buffer[i][j] *= hrtf_buffer[c][j];
 
 					//FT: Inverse FT the product
-					sFFT.realInverse(segmented_buffer[i], true);	
+					sFFT.realInverse(segmented_buffer[i], false);	
 				}
 
-				//System.out.println("Reconstructing Channel "+(c+1));
+				System.out.println("Reconstructing Channel "+(c+1));
 				//Rebuild: Add the inverse segment into the new sound
-				sound_buffer[c] = reconstructSignal(segmented_buffer, sound_buffer[c].length);
+				System.out.println((int)hrtf_wave.getNumFrames()+"+"+sound_buffer[0].length+"-1 ="+output_signal[c].length);
+				output_signal[c] = reconstructSignal(segmented_buffer, output_signal[c].length);
 			}	
 		
 			//Return new sound
-			return sound_buffer;
+			return output_signal;
 		}
 		catch(Exception e){
                                 System.err.println(e);
@@ -180,43 +189,37 @@ class Convolution {
 		return null;
 	}
 
-	//Segments the signal based on the given length of the HRTF
+	//Segments the signal based on the given length of the HRTF (Windowing)
 	static private double[][] segmentSignal(double[] s, int length){	
-		if(s.length>length){
-			int segments = (int)Math.ceil((double)s.length/((double)length));
-			double[][] seg_signal = new double[segments][length];
-			for(int i=0; i<segments; i++){
-				for(int j=0; j<length; j++){
-					if(i!=(segments-1))
-						seg_signal[i][j] = s[j+i*length];
-					else if((j+i*length)<s.length)
-						seg_signal[i][j] = s[j+i*length];
-					else
-						seg_signal[i][j] = 0;
-				}
-			}
-			return seg_signal;
+		int segments = (int)Math.ceil((double)s.length/((double)length));
+		double[][] seg_signal = new double[segments][(2*length-1)];
+		for(int i=0; i<segments; i++){
+			for(int j=0; j<seg_signal[0].length; j++)
+				seg_signal[i][j] = 0;
 		}
-		else{
-			double[][] seg_signal = new double[1][length];
-			for(int i=0; i<length; i++){
-				if(s.length<i)
-					seg_signal[0][i] = s[i];
+		for(int i=0; i<segments; i++){
+			for(int j=0; j<length; j++){
+				if(i!=(segments-1))
+					seg_signal[i][j] = s[j+i*length];
+				else if((j+i*length)<s.length)
+					seg_signal[i][j] = s[j+i*length];
 				else
-					seg_signal[0][i] = 0;
+					seg_signal[i][j] = 0;
 			}
-			return seg_signal;
 		}
+		return seg_signal;
 	}
 
-	//Reconstructs the signal from the segmented version
+	//Reconstructs the signal from the segmented version (Overlap and Add Algorithm)
 	static private double[] reconstructSignal(double[][] s, int length){
 		double[] signal = new double[length];
+		for(int i=0; i<length; i++) signal[i] = 0;
+		int m = (int)((s[0].length+1)/2);
 		for(int i=0; i<s.length; i++){
+			//System.out.println("m="+m+", seg="+i+", i="+(i*m)+" to "+(i*m+s[i].length));
 			for(int j=0; j<s[i].length; j++){
-				if((i*s[i].length+j)<length)
-					signal[i*s[i].length+j] = s[i][j];
-				else break;
+				if((i*m+j)<length)
+					signal[i*m+j] += s[i][j];
 			}
 		}
 		return signal;		
