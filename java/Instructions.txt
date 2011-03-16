@@ -1,5 +1,25 @@
-Compile all java files
-	javac *.java
+How to Setup & Run
 
-Run the convolution program
-	java Convolution stereo_sound.wav hrtf.wav output.wav
+	Compile all java files
+		javac *.java
+
+	Run the Run program
+		java Run stereo_sound.wav hrtf.wav output1.wav output2.wav
+
+
+Class Info
+
+	Run Class
+		A class that is used to to test, run, and benchmark the convolution.
+
+	Convolution Class
+		Contains methods such as,
+
+		convolveFFT - convolve signal using FFT method
+		convolveSum - convolve signal using the direct sum method or definition
+
+	Signal Class
+		Used to handle read/writing wav files as well as loading buffer data into a wav file
+
+		loadWav - load buffer data into a wav file
+		writeWav - write buffer data out into new wav file
