@@ -10,11 +10,11 @@ class Convolution {
 	//L = Listener
 	//L_hrtf = The subject # of the HRTF database 
 	
-	public static double[][] convolveFFT(double Sx, double Sy, double Sz, String Sa, double Lx, double Ly, double Lz, String hrtf_file){
+	public static double[][] convolveFFT(double Sx, double Sy, double Sz, double[] source_sound, String subject, int sampleRate){
 		//Error Checking: Check for audio/file errors
 
-		Signal sound = new Signal(Sa);
-		Signal hrtf = new Signal(hrtf_file);
+		Signal sound = new Signal(source_sound, sampleRate);
+		Signal hrtf = new Signal(Interpolation.getInterpolatedHrtfBuffer(subject, Sx, Sy, Sz), sampleRate);
 
 		int M = hrtf.numFrames;
 		int TWO_M_MINUS_ONE = 2*M-1;

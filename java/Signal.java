@@ -17,7 +17,7 @@ class Signal {
                         WavFile w = WavFile.openWavFile(new File(file));
 
                         sampleRate = (int)w.getSampleRate();
-                        numChannels = (int)w.getNumChannels();
+                        numChannels = w.getNumChannels();
                         numFrames = (int)w.getNumFrames();
 
                         buffer = new double[numChannels][numFrames];
@@ -36,10 +36,29 @@ class Signal {
 		numFrames = new_buffer[0].length;
 	}
 
+	public Signal(double[] new_buffer, int new_sampleRate){
+		buffer = new double[2][new_buffer.length];
+		buffer[0] = new_buffer;
+		buffer[1] = new_buffer;
+		sampleRate = new_sampleRate;
+		numChannels = new_buffer.length;
+		numFrames = new_buffer.length;
+	}
+
 	public void writeWav(String file){
 		try{
 			WavFile new_out = WavFile.newWavFile(new File(file), numChannels, buffer[0].length, 16, sampleRate);
                 	new_out.writeFrames(buffer, buffer[0].length);
+		}
+		catch(Exception e){
+                                System.err.println(e);
+                }
+	}
+
+	public void display(){
+		try{
+			WavFile w = WavFile.openWavFile(new File(fileName));
+			w.display();
 		}
 		catch(Exception e){
                                 System.err.println(e);
@@ -53,7 +72,7 @@ class Signal {
                         WavFile w = WavFile.openWavFile(new File(file));
 
                         sampleRate = (int)w.getSampleRate();
-                        numChannels = (int)w.getNumChannels();
+                        numChannels = w.getNumChannels();
                         numFrames = (int)w.getNumFrames();
 
                         buffer = new double[numChannels][numFrames];
