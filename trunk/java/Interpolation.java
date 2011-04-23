@@ -49,7 +49,10 @@ public class Interpolation {
 		else {
 			s = new String[2];
 			s[0] = fixString(calcEl+"");
-			s[1] = fixString((calcEl+5.625)+"");
+			if(calcEl > 0)
+				s[1] = fixString((calcEl+5.625)+"");
+			else if(calcEl < 0)
+				s[1] = fixString((calcEl-5.625)+"");				
 		}
 		return s;		
 	}
@@ -58,27 +61,48 @@ public class Interpolation {
 		String[] s;
 		double absAz = Math.abs(tarAz);
 		int azIndex = getAzimuthIndex(tarAz,AZ_INTERVAL, AZ_START);
-		//System.out.println("Azimuth: "+tarAz+", AzIndex: "+azIndex);
-		if(Math.abs(tarAz) > 90 || azIndex < 0) return null;
+		if(absAz > 90 || azIndex < 0) return null;
+		if(tarAz > 0 && absAz > 80) tarAz = 80;
+		if(tarAz < 0 && absAz > 80) tarAz = -80;
 		int calcAz = -90 + 5 * azIndex;
-		int scale = 1;
-		if(absAz >= 45) calcAz+=5;
-                if(absAz > 80) calcAz +=5;
-		if (Double.compare(tarAz,calcAz) == 0){
+		int nextAz;
+		if(tarAz < 0){
+			nextAz = calcAz;
+			calcAz += 5;
+			if(absAz > 45){
+				calcAz -=10;
+				nextAz += 5;	
+			}
+	        if(absAz > 65) calcAz -=5;			
+		}
+		else{
+			nextAz = calcAz + 5;
+			if(absAz > 45){
+				nextAz -=5;
+				calcAz +=10;
+			}
+	        if(absAz > 65){
+	        	calcAz +=5;			
+	        }
+		}
+		if(Math.abs(calcAz) > 80) calcAz = nextAz;
+		System.out.println(nextAz +" "+calcAz+ " " +tarAz) ;
+		if (Double.compare(tarAz,calcAz) == 0 || nextAz > 80){
 			s = new String[1];
 			s[0] = fixString(calcAz+"");
 		}
 		else {
 			s = new String[2];
-			s[0] = fixString(calcAz+"");
-			
-			s[1] = fixString((calcAz+5)+"");
+			s[0] = fixString(calcAz+"");		
+			s[1] = fixString(nextAz+"");
 		}
 		return s;
 	}
 	//Formats strings to match file name format
 	private static String fixString(String s){
 		int index = s.indexOf('.');
+		if(index == -1)
+			return s;
 		if(s.charAt(index+1) == '0') {
 			s = s.substring(0,index);
 		}
