@@ -42,7 +42,6 @@ public class Interpolation {
 		int elIndex = getElevationIndex(tarEl,EL_INTERVAL, EL_START);
 		if(tarEl > 180 || tarEl < -45 || elIndex < 0) return null;
 		double calcEl = (-45.0 + 5.625 * elIndex);
-		System.out.println(tarEl +" "+calcEl+ " " +tarEl) ;
 		if (Double.compare(tarEl,calcEl) == 0){
 			s = new String[1];
 			s[0] = fixString(calcEl+"");
