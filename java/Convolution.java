@@ -14,6 +14,24 @@ class Convolution {
 		//Error Checking: Check for audio/file errors
 
 		Signal sound = new Signal(source_sound, sampleRate);
+		double[][] interpolatedHRTF = Interpolation.getInterpolatedHrtfBuffer(subject, Sx, Sy, Sz);
+		
+		//if(interpolatedHRTF==null) System.out.println("NULL");
+		if(interpolatedHRTF==null){
+			try{
+				/*
+                                FileWriter fstream = new FileWriter("errors.txt", true);
+                                BufferedWriter out = new BufferedWriter(fstream);
+				double[] ele_az = convertVectorsToDegrees(Sx, Sy, Sz);			
+                                out.write("Error (NULL) for subject ("+subject+") at (ele, az) ( "+ele_az[0]+", "+ele_az[1]+")\n");
+                                out.close();*/
+				System.out.println("Error--NULL POINTER EXCEPTION IN CONVOLUTION");
+				return null;
+                        }
+                        catch(Exception e1){
+                                System.out.println(e1.getMessage());
+                        }
+		}
 		Signal hrtf = new Signal(Interpolation.getInterpolatedHrtfBuffer(subject, Sx, Sy, Sz), sampleRate);
 
 		int M = hrtf.numFrames;
@@ -130,4 +148,77 @@ class Convolution {
 		}
 		return result;
 	}
+	//Convert direction unit vectors into azimuth [-90, 90] and elevation [-180, 180]
+        public static double[] convertVectorsToDegrees(double x, double y, double z){
+                //ele_az[0] = elevation
+                //ele_az[1] = azimuth
+                double ele_az[] = new double[2];
+
+                //Assumes
+                        //HRTFS
+                                //Elevation > 0 -> above, Elevation < 0 -> below
+                                //Azimuth > 0 -> right, Azimuth < 0 -> left
+                        //Coordinates
+                                //Coordinates point to source of sound from listener
+                                //x > 0 -> left, x < 0 -> right
+                                //y > 0 -> front, y < 0 -> back
+                                //z > 0 -> above, z < 0 -> below                
+
+                //Calcualte Elevation
+                if(z>0){//Above
+                        if(y>0){//Above in front
+                                ele_az[0] = Math.atan(Math.abs(z/y))/Math.PI*180;
+                        }
+                        else{//Above in back
+                                if(y!=0)
+                                        ele_az[0] = 180 - Math.atan(Math.abs(z/y))/Math.PI*180;
+                                else
+                                        ele_az[0] = 180;
+                        }
+                }
+                else{//Below
+                        if(y>0){ //Below in front
+                                ele_az[0] = -Math.atan(Math.abs(z/y))/Math.PI*180;
+                        }
+                        else{//Below in back
+                                if(y!=0)
+                                        ele_az[0] = Math.atan(Math.abs(z/y))/Math.PI*180-180;
+                                else if(z<0)
+                                        ele_az[0] = -180;
+                                else
+                                        ele_az[0] = 0;
+                        }
+                }
+	
+		//Calculate Azimuth
+                if(y>0){//Front
+                        if(x>0){//Front to the left
+                                ele_az[1] = -Math.atan(Math.abs(x/y))/Math.PI*180;
+                        }
+                        else{//Front to the right
+                                ele_az[1] = Math.atan(Math.abs(x/y))/Math.PI*180;
+                        }
+                }
+                else{//Back
+                        if(y!=0){
+                                if(x>0){//Back to the left
+                                        ele_az[1] = Math.atan(Math.abs(x/y))/Math.PI*180;
+                                }
+                                else{//Back to the right
+                                        ele_az[1] = -Math.atan(Math.abs(x/y))/Math.PI*180;
+                                }
+                        }
+                        else{// y=0
+                                if(x>0)
+                                        ele_az[1] = -90;
+                                else if(x<0)
+                                        ele_az[1] = 90;
+                                else
+                                        ele_az[1] = 0;
+                        }
+                }
+
+                return ele_az;
+        }
+
 }
