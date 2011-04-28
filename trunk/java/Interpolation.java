@@ -86,7 +86,6 @@ public class Interpolation {
 	        }
 		}
 		if(Math.abs(calcAz) > 80) calcAz = nextAz;
-		System.out.println(nextAz +" "+calcAz+ " " +tarAz) ;
 		if (Double.compare(tarAz,calcAz) == 0 || nextAz > 80){
 			s = new String[1];
 			s[0] = fixString(calcAz+"");
@@ -218,7 +217,6 @@ public class Interpolation {
                 		}
 				else{
 					String line = scanner.nextLine();
-                        		//System.out.println(line);
 					String ear_values[] = line.split("\\s");
                         		String left_ear[] = ear_values[0].split("e");
                         		String right_ear[] = ear_values[1].split("e");
@@ -241,10 +239,21 @@ public class Interpolation {
                         		index++;
 				}
                 	}
+			scanner.close();
 		}
-		catch(FileNotFoundException e) {
-			e.printStackTrace();
-		}	
+		catch(Exception e) {
+                	try{
+				/*
+                        	FileWriter fstream = new FileWriter("errors.txt", true);
+                                BufferedWriter out = new BufferedWriter(fstream);
+                                out.write("Error "+e.getMessage()+" at "+name+"\n");
+                                out.close();*/
+				System.out.println("Error "+e.getMessage());
+                        }
+                        catch(Exception e1){
+                        	System.out.println(e1.getMessage());
+                       	}
+                }
 
 		return sound_buffer;
 	}
@@ -252,22 +261,22 @@ public class Interpolation {
 	public static double[][] getInterpolatedHrtfBuffer(String subject, double x, double y, double z){
 
 		double ele_az[] = convertVectorsToDegrees(x, y, z);
-		System.out.println("Elevation: "+ele_az[0]+", Azimuth: "+ele_az[1]);
 		String hrtfs[] = getHrtfs(subject, ele_az[0], ele_az[1]);
 
 		if(hrtfs!=null){
 			double hrtf_buffers[][][] = new double[hrtfs.length][2][200];
 			for(int i=0; i<hrtfs.length; i++){
 				hrtf_buffers[i] = getHrtfBuffer(hrtfs[i]);
-				System.out.println(hrtfs[i]);
 			}
 			
 			if(hrtfs.length==4)
 				return interpolate4(hrtf_buffers[0], hrtf_buffers[1], hrtf_buffers[2], hrtf_buffers[3]);
 			else if(hrtfs.length==2){
 				double returnVal[][] = interpolate2(hrtf_buffers[0], hrtf_buffers[1], 0.5, 0.5);
-				System.out.println("Return length: "+returnVal[0].length);
 				return interpolate2(hrtf_buffers[0], hrtf_buffers[1], 0.5, 0.5);
+			}
+			else if(hrtfs.length==1){
+				return hrtf_buffers[0];
 			}
 			else return null;
 		}
