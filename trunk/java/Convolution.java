@@ -10,10 +10,9 @@ class Convolution {
 	//L = Listener
 	//L_hrtf = The subject # of the HRTF database 
 	
-	public static double[][] convolveFFT(double Sx, double Sy, double Sz, double[] source_sound, String subject, int sampleRate){
+	public static double[][] convolveFFT(double Sx, double Sy, double Sz, double[] source_sound, String subject){
 		//Error Checking: Check for audio/file errors
 
-		Signal sound = new Signal(source_sound, sampleRate);
 		double[][] interpolatedHRTF = Interpolation.getInterpolatedHrtfBuffer(subject, Sx, Sy, Sz);
 		
 		//if(interpolatedHRTF==null) System.out.println("NULL");
@@ -32,27 +31,25 @@ class Convolution {
                                 System.out.println(e1.getMessage());
                         }
 		}
-		Signal hrtf = new Signal(Interpolation.getInterpolatedHrtfBuffer(subject, Sx, Sy, Sz), sampleRate);
+		double[][] hrtf = Interpolation.getInterpolatedHrtfBuffer(subject, Sx, Sy, Sz);
 
-		int M = hrtf.numFrames;
+		int M = hrtf[0].length;
 		int TWO_M_MINUS_ONE = 2*M-1;
-		int N_PLUS_M_MINUS_ONE = sound.numFrames + hrtf.numFrames -1;
+		int N_PLUS_M_MINUS_ONE = source_sound.length + hrtf[0].length -1;
 
 		//What we will return
 		double[][] output = new double[2][N_PLUS_M_MINUS_ONE];
 
 		//The hrtf buffer that has been fourier transformed
-		double[][] fft_hrtf = new double[hrtf.numChannels][2*TWO_M_MINUS_ONE];
-		for(int i=0; i<hrtf.numChannels; i++){
-			for(int j=0; j<hrtf.numFrames; j++)
-				fft_hrtf[i][j] = hrtf.buffer[i][j];
+		double[][] fft_hrtf = new double[hrtf.length][2*TWO_M_MINUS_ONE];
+		for(int i=0; i<hrtf.length; i++){
+			for(int j=0; j<hrtf[0].length; j++)
+				fft_hrtf[i][j] = hrtf[i][j];
 		} 		
 
 		for(int c=0; c<2; c++){
 			//The sound signal segmented to work with FFT
-			int d = c;
-			if(c==1 && sound.numChannels==1) d = 0; 
-                	double[][] fft_seg_sound = segmentSignal(sound.buffer[d], hrtf.numFrames);
+                	double[][] fft_seg_sound = segmentSignal(source_sound, hrtf[0].length);
 
 			//Apply the Forward Fourier Transform to the filter kernel
                         DoubleFFT_1D hFFT = new DoubleFFT_1D(TWO_M_MINUS_ONE);
@@ -126,6 +123,7 @@ class Convolution {
 	}
 
 	//Convolution Sum Algorithm
+	/*
 	public static double[][] convolveSum(String source_file, String hrtf_file){
 		Signal hrtf = new Signal(hrtf_file);
 		Signal source = new Signal(source_file);
@@ -147,7 +145,7 @@ class Convolution {
 			}
 		}
 		return result;
-	}
+	}*/
 	//Convert direction unit vectors into azimuth [-90, 90] and elevation [-180, 180]
         public static double[] convertVectorsToDegrees(double x, double y, double z){
                 //ele_az[0] = elevation

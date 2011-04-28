@@ -52,7 +52,11 @@ public class Interpolation {
 			if(tarEl > 0)
 				s[1] = fixString((calcEl+5.625)+"");
 			else if(tarEl < 0)
-				s[1] = fixString((calcEl-5.625)+"");				
+				s[1] = fixString((calcEl-5.625)+"");
+			else{
+				s = new String[1];
+				s[0] = fixString(calcEl+"");
+			}				
 		}
 		return s;		
 	}
@@ -200,7 +204,6 @@ public class Interpolation {
 	}
 	//Read txt hrtf file
 	public static double[][] getHrtfBuffer(String name){
-		
 		File file = new File(name);
 		double sound_buffer[][] = new double[2][200];		
 
