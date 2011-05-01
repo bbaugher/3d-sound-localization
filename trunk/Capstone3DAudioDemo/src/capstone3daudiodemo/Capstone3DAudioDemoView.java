@@ -22,6 +22,8 @@ import javax.swing.Icon;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 
+import java.lang.StringBuilder;
+
 /**
  * The application's main frame.
  */
@@ -291,7 +293,7 @@ public class Capstone3DAudioDemoView extends FrameView {
 
     private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton2ActionPerformed
         // TODO add your handling code here:
-        Customization3D c3dframe = new Customization3D();
+        Customization3D c3dframe = new Customization3D(HRTFNum);
         c3dframe.setVisible(true);
     }//GEN-LAST:event_jButton2ActionPerformed
 
@@ -313,6 +315,9 @@ public class Capstone3DAudioDemoView extends FrameView {
             soundFileSelection = 1;
         if(jRadioButton3.isSelected()) //tone
             soundFileSelection = 2;
+
+        //Call HRTFNum.toString() to get a string of the currently selected HRTF
+        //003 by default
 
         String soundFileLoc = "";
         try{
@@ -377,4 +382,6 @@ public class Capstone3DAudioDemoView extends FrameView {
     private int busyIconIndex = 0;
 
     private JDialog aboutBox;
+
+    private StringBuilder HRTFNum = new StringBuilder("003");
 }
