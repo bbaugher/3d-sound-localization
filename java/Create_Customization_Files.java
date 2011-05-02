@@ -9,7 +9,7 @@ class Create_Customization_Files {
 //A Class to test and benchmark Convolution
 
     public static void main(String[] args) {
-		if (args.length != 5) {
+		if (args.length != 2) {
 			System.err.println("usage: stero.wav volume");
 			return;
 		}
