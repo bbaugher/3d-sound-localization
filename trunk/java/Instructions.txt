@@ -1,16 +1,26 @@
 How to Setup & Run
 
+	Download
+		The New HRTF Database and place within the 3d-sound-localization/java folder.
+
 	Compile all java files
 		javac *.java
 
 	Run the Run program
-		java Run stereo_sound.wav hrtf.wav output1.wav output2.wav
+		java Run stereo_sound.wav x y z out.wav
+
+		Where x, y, and z are vectors for left-right, front-back, and up-down respectively.
 
 
 Class Info
 
 	Run Class
-		A class that is used to to test, run, and benchmark the convolution.
+		A class that is used to convolve a single audio sample given an x, y, and z vector
+
+	Create_Customization_Files
+		A class that is used to create 4 convolve samples per subject of an audio sample. These samples are at the same elevation
+		but starting at 45 degrees and going 90 degrees for every sample. (45, 135, 225, 315) They are written out to a directory
+		called customization.
 
 	Convolution Class
 		Contains methods such as,
@@ -18,8 +28,15 @@ Class Info
 		convolveFFT - convolve signal using FFT method
 		convolveSum - convolve signal using the direct sum method or definition
 
+	Interpolation Class
+		A class used to, given set of 3 vectors, finds the closest hrtfs and merges them together. Then returns the output.
+
 	Signal Class
 		Used to handle read/writing wav files as well as loading buffer data into a wav file
 
 		loadWav - load buffer data into a wav file
 		writeWav - write buffer data out into new wav file
+
+	CipicDownloader Class
+		Originally used to download the txt files from the CIPIC hrtf database. Then it was to be used to download them
+		and convert them into .wav files, but it was found the WavFile class could not read files it had written. (What?)
