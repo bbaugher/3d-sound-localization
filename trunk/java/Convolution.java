@@ -10,6 +10,9 @@ class Convolution {
 	//L = Listener
 	//L_hrtf = The subject # of the HRTF database 
 	
+	//@author: Bryan Baugher
+	//convolveFFT - This is the method which is called to convolve a sound using the FFT algorithm
+	//It handles everything from interpolation, to integration, to the actual FFT algorithm and segmenting the audio
 	public static double[][] convolveFFT(double Sx, double Sy, double Sz, double[] source_sound, String subject){
 		//Error Checking: Check for audio/file errors
 
@@ -76,6 +79,7 @@ class Convolution {
 		return output;
 	}
 
+	//@author: Bryan Baugher
 	//Segments the signal based on the given length of the HRTF (Windowing)
 	static private double[][] segmentSignal(double[] s, int length){
 		int TWO_M_MINUS_ONE = 2*length - 1;	
@@ -97,7 +101,8 @@ class Convolution {
 		}
 		return seg_signal;
 	}
-
+	
+	//@author: Bryan Baugher
 	//Reconstructs the signal from the segmented version (Overlap and Add Algorithm)
 	static private double[] reconstructSignal(double[][] s, int length){
 		double[] signal = new double[length];
@@ -113,7 +118,7 @@ class Convolution {
 		}
 		return signal;		
 	}
-
+	//@author: Bryan Baugher
 	//Complex Multiplication for our buffers
 	static private double complexMultiplication(boolean isReal, double real_a, double img_a, double real_b, double img_b){
 		if(isReal)
@@ -122,7 +127,8 @@ class Convolution {
 			return (real_a*img_b) + (real_b*img_a);
 	}
 
-	//Convolution Sum Algorithm
+	//@author: Bryan Baugher
+	//Convolution Sum Algorithm - Direct convolution algorithm
 	/*
 	public static double[][] convolveSum(String source_file, String hrtf_file){
 		Signal hrtf = new Signal(hrtf_file);
@@ -146,77 +152,4 @@ class Convolution {
 		}
 		return result;
 	}*/
-	//Convert direction unit vectors into azimuth [-90, 90] and elevation [-180, 180]
-        public static double[] convertVectorsToDegrees(double x, double y, double z){
-                //ele_az[0] = elevation
-                //ele_az[1] = azimuth
-                double ele_az[] = new double[2];
-
-                //Assumes
-                        //HRTFS
-                                //Elevation > 0 -> above, Elevation < 0 -> below
-                                //Azimuth > 0 -> right, Azimuth < 0 -> left
-                        //Coordinates
-                                //Coordinates point to source of sound from listener
-                                //x > 0 -> left, x < 0 -> right
-                                //y > 0 -> front, y < 0 -> back
-                                //z > 0 -> above, z < 0 -> below                
-
-                //Calcualte Elevation
-                if(z>0){//Above
-                        if(y>0){//Above in front
-                                ele_az[0] = Math.atan(Math.abs(z/y))/Math.PI*180;
-                        }
-                        else{//Above in back
-                                if(y!=0)
-                                        ele_az[0] = 180 - Math.atan(Math.abs(z/y))/Math.PI*180;
-                                else
-                                        ele_az[0] = 180;
-                        }
-                }
-                else{//Below
-                        if(y>0){ //Below in front
-                                ele_az[0] = -Math.atan(Math.abs(z/y))/Math.PI*180;
-                        }
-                        else{//Below in back
-                                if(y!=0)
-                                        ele_az[0] = Math.atan(Math.abs(z/y))/Math.PI*180-180;
-                                else if(z<0)
-                                        ele_az[0] = -180;
-                                else
-                                        ele_az[0] = 0;
-                        }
-                }
-	
-		//Calculate Azimuth
-                if(y>0){//Front
-                        if(x>0){//Front to the left
-                                ele_az[1] = -Math.atan(Math.abs(x/y))/Math.PI*180;
-                        }
-                        else{//Front to the right
-                                ele_az[1] = Math.atan(Math.abs(x/y))/Math.PI*180;
-                        }
-                }
-                else{//Back
-                        if(y!=0){
-                                if(x>0){//Back to the left
-                                        ele_az[1] = Math.atan(Math.abs(x/y))/Math.PI*180;
-                                }
-                                else{//Back to the right
-                                        ele_az[1] = -Math.atan(Math.abs(x/y))/Math.PI*180;
-                                }
-                        }
-                        else{// y=0
-                                if(x>0)
-                                        ele_az[1] = -90;
-                                else if(x<0)
-                                        ele_az[1] = 90;
-                                else
-                                        ele_az[1] = 0;
-                        }
-                }
-
-                return ele_az;
-        }
-
 }
