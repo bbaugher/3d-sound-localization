@@ -1,16 +1,26 @@
 
 import java.io.*;
 import java.util.Scanner;
-
+//Methods for HRTF selection and interpolation
+//@authors Paul Baskett and Bryan Baugher
 public class Interpolation {
+
+	//Paul: CIPIC database has elevations with a constant interval
 	private static final double EL_INTERVAL = 5.625;
+	//Paul: Elevation measurements go from -45 to 180
 	private static final double EL_START = -45.0;
+	//Paul: Azimuths go from -90 to 90
 	private static final int AZ_START = -90;
+	//Paul: Interval is 5 for most azimuths
 	private static final int AZ_INTERVAL = 5;
+	//Paul: HRTF File path
 	private static final String HRTF_PATH = "hrtf/";
+	//Paul: HRTF File format
 	private static final String HRTF_FILETYPE = ".txt";
+	//Paul: Number of datapoints in each hrtf, 200 in CIPIC
 	private static final int DATAPOINTS = 200;
 	
+	//For testing
 	public static void main(String[] args) {
 		//int index = getElevationIndex(174, 5.625, -45);
 		String[] result = getHrtfs("003",32, -52);
@@ -19,14 +29,22 @@ public class Interpolation {
 		}
 	}
 	
-	/* getHrtfs - returns a string array of 4 hrtfs to interpolate
-	 * returns null if input is invalid
-	 */
+	// @author Paul Baskett 
+	// getHrtfs - returns a string array of hrtfs to load
+	// @return null if input is invalid or 1, 2 or 4 hrtfs
+	//	if the point is exact, return 1, if it is a known azimuth
+	//		or elevation return 2 (to interpolate inexact dimension)
+	//		or 4 if neither elevation or azimuth is exact
 	public static String[] getHrtfs(String subject, double tarEl, double tarAz){
+		// get the elevations
 		String[] elevations = getElevation(tarEl);
+		// get the azimuths
 		String[] azimuths = getAzimuth(tarAz);
+		// Azimuth and/or elevation were invalid, return null
 		if(elevations == null || azimuths == null) return null;
+		//There will be azimuths * elevations hrtfs returned
 		String[] results = new String[elevations.length * azimuths.length];
+		//Build strings for the hrtf file paths
 		int index = 0;
 		for(int i = 0; i < elevations.length; i++){
 			for(int j = 0; j < azimuths.length;j++){
@@ -34,23 +52,39 @@ public class Interpolation {
 				index++;
 			}
 		}
+		//return the results
 		return results;
 	}
-	//Returns valid elevations as string array or null if input is invalid
+
+	// @author Paul Baskett
+	// getElevation this will return the closest elevations
+	//		to the desired target elevation, or the target
+	//		if it is exact
+	// @return The closest elevations as a string
 	private static String[] getElevation(double tarEl){
 		String[] s;
+		//Elevations are uniform, so they can be calculated as -45 + i * 5.625
+		//	so we first calculate i for the hrtf above our target elevation
 		int elIndex = getElevationIndex(tarEl,EL_INTERVAL, EL_START);
+		//Invalid input, return null
 		if(tarEl > 180 || tarEl < -45 || elIndex < 0) return null;
+		//Convert i into an elevation
 		double calcEl = (-45.0 + 5.625 * elIndex);
+		//If target and calculated are equal, the elevation is exact and can be returned
 		if (Double.compare(tarEl,calcEl) == 0){
 			s = new String[1];
 			s[0] = fixString(calcEl+"");
 		}
+		//Otherwise, the elevation isn't exact, so we need to get another
 		else {
 			s = new String[2];
 			s[0] = fixString(calcEl+"");
+			//If the target is positive the index will give us the elevation below the target
+			//	so we need to get the one above it too
 			if(tarEl > 0)
 				s[1] = fixString((calcEl+5.625)+"");
+			//If the target is negative the index will give us the elevation above the target 
+			//	so we need to the get one below it
 			else if(tarEl < 0)
 				s[1] = fixString((calcEl-5.625)+"");
 			else{
@@ -58,18 +92,33 @@ public class Interpolation {
 				s[0] = fixString(calcEl+"");
 			}				
 		}
+		//Return the elevations
 		return s;		
 	}
-	//Returns valid azimuths as string array or null if input is invalid
+
+	// @author Paul Baskett
+	// getAzimuth return the closest azimuths as an array of strings
+	// @return null if input is invalid, 1 if the target is known
+	//	or the closest 2 azimuths to the target
 	private static String[] getAzimuth(double tarAz){
 		String[] s;
+		//calculate the abs value of the azimuth to use for later calculations
 		double absAz = Math.abs(tarAz);
+		//Azimuth isn't uniform but the majority use an interval of 5
+		//	so we can calculate azimuth as -90 + i * 5 + scaling if it's more than 5
 		int azIndex = getAzimuthIndex(tarAz,AZ_INTERVAL, AZ_START);
+		//invalid input, return null
 		if(absAz > 90 || azIndex < 0) return null;
+		//positive and negative 80 are the largest values we actually have, so we need
+		//	to make sure we don't return anything larger
 		if(tarAz > 0 && absAz > 80) tarAz = 80;
 		if(tarAz < 0 && absAz > 80) tarAz = -80;
+		//compute the actual azimuth
 		int calcAz = -90 + 5 * azIndex;
 		int nextAz;
+		//We also need to get the next azimuth
+		//	if it's more than 45 we need to start scaling
+		//	it by adding/subtracting
 		if(tarAz < 0){
 			nextAz = calcAz;
 			calcAz += 5;
@@ -89,11 +138,14 @@ public class Interpolation {
 	        	calcAz +=5;			
 	        }
 		}
+		//If the next one is more than 80, just use 80
 		if(Math.abs(calcAz) > 80) calcAz = nextAz;
+		//If it would return more than 80 or there it's an exact azimuth, return 1
 		if (Double.compare(tarAz,calcAz) == 0 || nextAz > 80){
 			s = new String[1];
 			s[0] = fixString(calcAz+"");
 		}
+		//otherwise, return both of them
 		else {
 			s = new String[2];
 			s[0] = fixString(calcAz+"");		
@@ -101,7 +153,9 @@ public class Interpolation {
 		}
 		return s;
 	}
-	//Formats strings to match file name format
+	//@author Paul Baskett
+	//fixString The hrtf file names don't have .'s after 0's but we're using doubles
+	//		so we need remove them
 	private static String fixString(String s){
 		int index = s.indexOf('.');
 		if(index == -1)
@@ -111,20 +165,32 @@ public class Interpolation {
 		}
 		return s;
 	}
-	//Returns elevation index
+	//@author Paul Baskett
+	//	getElevationIndex	return the value used to calculate the elevation
 	private static int getElevationIndex(double target, double interval, double start){
+		//return -1 if invalid input
 		if(target < -45 || target > 180) return -1;
+		// i = ((TargetElevation - (TargetElevation%ElevationInterval))/interval) - (start/interval)
 		double elevation = (target - (target%interval))/interval - (start/interval);
 		return (int)elevation;
 	}	
-	//Returns azimuth index
+	//@author Paul Baskett
+	//	getAzimuthIndex	return the value used to calculate the elevation
 	private static int getAzimuthIndex(double target, double interval, double start){
+		//Get absolute value
 		double absTarget = Math.abs(target);
+		//Return -1 if target is invalid
 		if( absTarget > 90) return -1;
+		//If the absolute value is above 80 we need to set it to 80 and then
+		//	apply the correct sign by using target/abs(target)
 		if( absTarget > 80) target = 80*(target/absTarget);	
+		//Set target to 65
 		else if( absTarget > 65) target = 65*(target/absTarget);
+		//Set target to 55
 		else if( absTarget > 55) target = 55*(target/absTarget);
+		//Set target to 45
 		else if( absTarget > 45) target = 45*(target/absTarget);
+		// i = ((TargetAzimuth - (TargetAzimuth%AzimuthInterval))/interval) - (start/interval)		
 		double azimuth = (target - (target%interval))/interval - (start/interval);
 		int result = (int) azimuth;
 		if(target < 0) result--;
@@ -308,35 +374,41 @@ public class Interpolation {
 			return interpolate2(getHrtfBuffer(HRTF_PATH+"ubject_"+subject+"_"+az[0]+"_180"+HRTF_FILETYPE), getHrtfBuffer(HRTF_PATH+"ubject_"+subject+"_"+az[0]+"_-45"+HRTF_FILETYPE), w1, w2);
 		}
 	}
-	//Interpolate 2 hrtfs
+	//@author Paul Baskett
+	//	Interpolate 2 hrtfs for single channel audio with given weights
 	public static double[] interpolate2(double[] a1, double[] a2, double weight1,
 			double weight2){
 		int i;
+		//Weighted Average of each datapoint
 		double[] result = new double[DATAPOINTS];
 		for(i = 0; i < DATAPOINTS; i++){
 			result[i] = weight1*a1[i] + weight2*a2[i];
 		}
 		return result;
 	}
-	//Interpolate 2 hrtfs
+	//@author Paul Baskett
+	// Interpolate 2 hrtfs for dual channel audio with given weights
 	public static double[][] interpolate2(double[][] a1, double[][] a2, double weight1,
                         double weight2){
-                int i;
-                double[][] result = new double[2][DATAPOINTS];
+        int i;
+        double[][] result = new double[2][DATAPOINTS];
                 
+		//Weighted mean for each channel		
 		for(i = 0; i < DATAPOINTS; i++){
                         result[0][i] = weight1*a1[0][i] + weight2*a2[0][i];
                 }
 		for(i = 0; i < DATAPOINTS; i++){
                       	result[1][i] = weight1*a1[1][i] + weight2*a2[1][i];
                 }
-                return result;
-        }
-	//Interpolate 4 hrtfs
+        return result;
+    }
+	//@author Paul Baskett
+	// Interpolate 4 hrtfs for dual channel audio with given weights
 	public static double[][] interpolate4(double[][] a1, double[][] a2, double[][] a3, double[][] a4, double w1,
 			double w2, double w3, double w4){
 		int i;
 		double[][] result = new double[2][DATAPOINTS];
+		//Interpolate both channels
 		for(i = 0; i < DATAPOINTS; i++){
 			result[0][i] = w1*a1[0][i] + w2*a2[0][i] + w3*a3[0][i] + w4*a4[0][i];
 		}
@@ -345,11 +417,15 @@ public class Interpolation {
 		}
 		return result;
 	}
+	//@author Paul Baskett
+	// Interpolate 4 hrtfs for dual channel audio with equal weight	
 	public static double[][] interpolate4(double[][] a1, double[][] a2, double[][] a3, double[][] a4){
 		int i;
 		double w1, w2, w3, w4;
+		//Equal weights
 	    w1 = w2 = w3 = w4 = .25;
 		double[][] result = new double[2][DATAPOINTS];
+		//Interpolate both channels
 		for(i = 0; i < DATAPOINTS; i++){
 			result[0][i] = w1*a1[0][i] + w2*a2[0][i] + w3*a3[0][i] + w4*a4[0][i];
 		}
@@ -358,15 +434,6 @@ public class Interpolation {
 		}
 		return result;
 	}
-/*	public static double[][] interpolate(String subject, double tarEl, double tarAz){
-		String[] filenames = getHrtfs(subject, tarEl, tarAz);
-		File[] files = new File[filenames.length];
-		double[][][] hrtfs = new double[4][2][DATAPOINTS]; 
-		//Read HRTFs into "hrtfs" here
-		//Can use interpolate4 for 4 hrtfs or interpolate2 for just 2
-		
-		double[][] finalhrtf = interpolate4(hrtfs[0], hrtfs[1], hrtfs[2], hrtfs[3]);
-		return finalhrtf;
-	}*/
+
 }
 
