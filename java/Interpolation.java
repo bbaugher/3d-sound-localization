@@ -196,6 +196,7 @@ public class Interpolation {
 		if(target < 0) result--;
 		return result;		
 	}
+	//@author: Bryan Baugher
 	//Convert direction unit vectors into azimuth [-90, 90] and elevation [-180, 180]
 	public static double[] convertVectorsToDegrees(double x, double y, double z){
 		//ele_az[0] = elevation
@@ -268,7 +269,8 @@ public class Interpolation {
 
 		return ele_az;
 	}
-	//Read txt hrtf file
+	//@author: Bryan Baugher
+	//Read txt hrtf file and parse data
 	public static double[][] getHrtfBuffer(String name){
 		File file = new File(name);
 		double sound_buffer[][] = new double[2][200];		
@@ -326,6 +328,7 @@ public class Interpolation {
 
 		return sound_buffer;
 	}
+	//@author: Bryan Baugher
 	//Get interpolated HRTF buffer -- What will get called by Convolution
 	public static double[][] getInterpolatedHrtfBuffer(String subject, double x, double y, double z){
 
@@ -354,7 +357,8 @@ public class Interpolation {
 		}
 	}
 
-	//Interpolation for elevation < -45
+	//@author: Bryan Baugher
+	//Interpolation for elevation < -45, since we are missing these data points
 	public static double[][] interpolateSpecial(String subject, double elevation, double azimuth){
 
 		double w1, w2, w3, w4;
