@@ -1,0 +1,1 @@
+Transform stereo sound so it sounds as if the source is in the 3D space.
